@@ -1,6 +1,8 @@
 const canvas = document.querySelector('canvas');
 const c = canvas.getContext('2d')
 const scoreEl = document.querySelector('#scoreEl')
+const startgameBtn = document.querySelector('#startgameBtn')
+const modalEl = document.querySelector('#modalEl')
 
 canvas.width = innerWidth
 canvas.height = innerHeight
@@ -217,5 +219,9 @@ addEventListener('click', (event) => {
     projectiles.push(new Projectile(canvas.width / 2, canvas.height / 2, 5, 'white', velocity))
 })
 
-animate()
-spawEnemies()
+startgameBtn.addEventListener('click', () => {
+    animate()
+    spawEnemies()
+    modalEl.style.display = 'none'
+
+})
