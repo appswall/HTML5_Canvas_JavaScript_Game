@@ -3,6 +3,7 @@ const c = canvas.getContext('2d')
 const scoreEl = document.querySelector('#scoreEl')
 const startgameBtn = document.querySelector('#startgameBtn')
 const modalEl = document.querySelector('#modalEl')
+const bigScoreEl = document.querySelector('#bigScoreEl')
 
 canvas.width = innerWidth
 canvas.height = innerHeight
@@ -169,6 +170,8 @@ function animate() {
         //Fim do jogo 
         if (dist - enemy.radius - player.radius < 1) {
             cancelAnimationFrame(animationId)
+            modalEl.style.display = 'flex'
+            bigScoreEl.innerHTML = score
         }
 
         projectiles.forEach((projectile, projectileIndex) => {
@@ -187,8 +190,8 @@ function animate() {
                 if (enemy.radius - 10 > 5) {
 
                     //pontuando
-                    score += 10
-                    scoreEl.innerHTML = score
+                    score += 100
+                    scoreEl.innerHTML = score / 10
 
                     gsap.to(enemy, {
                         radius: enemy.radius - 10
@@ -198,8 +201,8 @@ function animate() {
                     }, 0)
                 } else {
                     //pontuando inimigo morto
-                    score += 25
-                    scoreEl.innerHTML = score
+                    score += 250
+                    scoreEl.innerHTML = score / 10
                     setTimeout(() => {
                         enemies.splice(index, 1)
                         projectiles.splice(projectileIndex, 1)
