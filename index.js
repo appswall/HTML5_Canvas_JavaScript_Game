@@ -8,7 +8,7 @@ const bigScoreEl = document.querySelector('#bigScoreEl')
 canvas.width = innerWidth
 canvas.height = innerHeight
 
-
+var ctx = canvas.getContext("2d");
 
 class Player {
     constructor(x, y, radius, color) {
@@ -68,6 +68,29 @@ class Enemy {
     }
 }
 
+
+class Special {
+    constructor(x, y, radius, color, velocity) {
+        this.x = x
+        this.y = y
+        this.radius = radius
+        this.color = color
+        this.velocity = velocity
+    }
+    draw() {
+        c.beginPath()
+        c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false)
+        c.fillStyle = this.color
+        c.fill()
+    }
+
+    update() {
+        this.draw()
+        this.x = this.x + this.velocity.x
+        this.y = this.y + this.velocity.y
+    }
+}
+
 const friction = 0.99
 class Particle {
     constructor(x, y, radius, color, velocity) {
@@ -98,6 +121,54 @@ class Particle {
     }
 }
 
+//expansão do especial
+function new_circle() {
+
+    c.strokeStyle = 'red';
+    c.lineWidth = 5;
+
+    var startTime = 0;
+    var animationTime = 5; // seconds
+    var fn = function (time) {
+        if (startTime) {
+            var t = (time - startTime) / 100;
+            if (t > animationTime) {
+                t = animationTime;
+            }
+            var i = canvas.height / 2 * t / animationTime;
+            c.beginPath();
+            c.arc(canvas.width / 2, canvas.height / 2, i, 0, 2 * Math.PI);
+
+            //explosoes com o toque
+            enemies.forEach((enemy, index) => {
+                const dist = Math.hypot(c.x - enemy.x, c.y - enemy.y)
+                if (dist - enemy.radius - c.radius < 1) {
+                    for (let i = 0; i < c.radius * 2; i++) {
+                        particles.push(new Particle(c.x, c.y, Math.random() * 2, enemy.color, {
+                            x: (Math.random() - 0.5) * (Math.random() * 6),
+                            y: (Math.random() - 0.5) * (Math.random() * 6),
+                        }))
+                    }
+                }
+                setTimeout(() => {
+                    enemies.splice(index, 1)
+                    projectiles.splice(projectileIndex, 1)
+                }, 0)
+            })
+            c.fill();
+            c.stroke();
+            //-----------------------
+            if (t < animationTime) {
+                requestAnimationFrame(fn);
+            }
+        } else { // first call to requestAnimationFrame sets the start time
+            startTime = time;
+            requestAnimationFrame(fn);
+        }
+    };
+    requestAnimationFrame(fn);
+}
+
 
 
 const x = canvas.width / 2
@@ -106,12 +177,14 @@ const y = canvas.height / 2
 let player = new Player(x, y, 10, 'white')
 let projectiles = []
 let enemies = []
+let specials = []
 let particles = []
 
 function init() {
     player = new Player(x, y, 10, 'white')
     projectiles = []
     enemies = []
+    specials = []
     particles = []
     score = 0
     scoreEl.innerHTML = score
@@ -132,7 +205,7 @@ function spawEnemies() {
             x = Math.random() * canvas.width
             y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius
         }
-        const color = `hsl(${Math.random() * 360}, 50%, 50%)`
+        const color = 'red'
         const angle = Math.atan2(canvas.height / 2 - y, canvas.width / 2 - x)
         const velocity = {
             x: Math.cos(angle),
@@ -143,11 +216,38 @@ function spawEnemies() {
     }, 1000)
 }
 
+function spawSpecials() {
+    setInterval(() => {
+        const radius = Math.random() * (30 - 4) + 4
+
+        let x
+        let y
+
+        if (Math.random() < 0.5) {
+            x = Math.random() < 0.5 ? 0 - radius : canvas.width + radius
+            y = Math.random() * canvas.height
+        } else {
+            x = Math.random() * canvas.width
+            y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius
+        }
+        var color = 'rgba(255,255,0, 0.6)'
+        const angle = Math.atan2(canvas.height / 2 - y, canvas.width / 2 - x)
+        const velocity = {
+            x: Math.cos(angle),
+            y: Math.sin(angle)
+        }
+
+        specials.push(new Special(x, y, radius, color, velocity));
+    }, 30000)
+}
+
 let animationId
 let score = 0
 
 function animate() {
     animationId = requestAnimationFrame(animate)
+    stars = 200;
+
     c.fillStyle = 'rgba(0, 0, 0, 0.1)'
     c.fillRect(0, 0, canvas.width, canvas.height)
     player.draw()
@@ -219,6 +319,58 @@ function animate() {
             }
         })
     })
+    //----------------------------------------------
+    specials.forEach((special, index) => {
+        special.update()
+
+        const dist = Math.hypot(player.x - special.x, player.y - special.y)
+
+        //Quando o especial toca o jogador
+        if (dist - special.radius - player.radius < 1) {
+            setTimeout(() => {
+                specials.splice(index, 1)
+            }, 0)
+            new_circle();
+        }
+
+        projectiles.forEach((projectile, projectileIndex) => {
+            const dist = Math.hypot(projectile.x - special.x, projectile.y - special.y)
+
+            //quando os projeteis tocam o especial 
+            if (dist - special.radius - projectile.radius < 1) {
+
+                //criando explosões
+                for (let i = 0; i < special.radius * 2; i++) {
+                    particles.push(new Particle(projectile.x, projectile.y, Math.random() * 2, special.color, {
+                        x: (Math.random() - 0.5) * (Math.random() * 6),
+                        y: (Math.random() - 0.5) * (Math.random() * 6),
+                    }))
+                }
+                if (special.radius - 10 > 5) {
+
+                    //pontuando
+                    score += 100
+                    scoreEl.innerHTML = score / 10
+
+                    gsap.to(special, {
+                        radius: special.radius - 10
+                    })
+                    setTimeout(() => {
+                        projectiles.splice(projectileIndex, 1)
+                    }, 0)
+                } else {
+                    //pontuando especial morto
+                    score += 250
+                    scoreEl.innerHTML = score / 10
+                    setTimeout(() => {
+                        specials.splice(index, 1)
+                        projectiles.splice(projectileIndex, 1)
+                    }, 0)
+                }
+            }
+        })
+
+    })
 }
 
 addEventListener('click', (event) => {
@@ -234,6 +386,7 @@ startgameBtn.addEventListener('click', () => {
     init()
     animate()
     spawEnemies()
+    spawSpecials()
     modalEl.style.display = 'none'
 
 })
